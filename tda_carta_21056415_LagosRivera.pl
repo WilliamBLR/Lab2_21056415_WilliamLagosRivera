@@ -33,3 +33,9 @@ getNumero(Carta, Num) :-
 %obtener el no,bre de la carta  
 getNombre(Carta, Nom) :-
     nth0(3, Carta, Nom).
+
+
+%RF02
+
+createEnergyCard(Expansion, Numero, Nombre, EC) :-
+    EC = ["energia", Expansion, Numero, Nombre].
