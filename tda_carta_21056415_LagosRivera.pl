@@ -1,3 +1,5 @@
+%funcion prinpal 
+
 :- module(tda_carta, [
     getTipoCarta/2,
     getExpansion/2,
