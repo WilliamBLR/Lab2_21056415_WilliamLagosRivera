@@ -1,3 +1,5 @@
+%TDA juego RF08
+
 :- module(tda_juego, [
     initGame/4
 ]).
