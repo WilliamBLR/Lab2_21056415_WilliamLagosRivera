@@ -1,7 +1,10 @@
 %TDA juego RF08
 
 :- module(tda_juego, [
-    initGame/4
+    initGame/4,
+    printGame/2,
+    playToBench/3
+
 ]).
 
 :- use_module(tda_carta_21056415_LagosRivera).
@@ -73,3 +76,43 @@ noTienePokemonBasicoMano([Carta | Resto]) :-
 
 determinarTurno(0, 1). 
 determinarTurno(1, 2).
+
+
+
+
+
+% Descripcion: Pone un Pokemon de la mano en la banca si hay espacio disponible.
+% Algoritmo: Identifica el turno actual. Verifica que la carta sea tipo pokemon
+% y que la banca tenga menos de 5 cartas. Saca la carta de la mano, la formatea
+% como Carta en Juego (agregando energias vacias, 0 dano y estado normal) y la 
+% anade a la lista de la banca.
+% Dominio: Game (TDA Juego) X pokemonCard (TDA Card) X GameOut (TDA Juego)
+
+playToBench([J1, J2, Turno], PokemonCard, GameOut) :-
+    (Turno == 1 ->
+        jugarABanca(J1, PokemonCard, J1Out),
+        GameOut = [J1Out, J2, Turno]
+    ;
+        jugarABanca(J2, PokemonCard, J2Out),
+        GameOut = [J1, J2Out, Turno]
+    ).
+
+% --- FUNCIONES AUXILIARES DE RF10 ---
+
+% Descripcion: Realiza la logica de mover la carta en el perfil del jugador.
+jugarABanca([ID, Mano, Premios, Mazo, Banca, Activo, Descarte], PokemonCard, JugadorOut) :-
+    getTipoCarta(PokemonCard, "pokemon"),
+    length(Banca, CantBanca),
+    CantBanca < 5,
+    sacarDeMano(PokemonCard, Mano, ManoOut),
+    CartaEnJuego = [PokemonCard, [], 0, "normal"],
+    append(Banca, [CartaEnJuego], BancaOut),
+    JugadorOut = [ID, ManoOut, Premios, Mazo, BancaOut, Activo, Descarte].
+
+% Descripcion: Elimina recursivamente una carta especifica de la mano.
+% Caso base: La carta buscada es la cabeza de la lista, devolvemos el resto.
+sacarDeMano(Carta, [Carta | Resto], Resto) :- !.
+
+% Caso recursivo: No es la cabeza, seguimos buscando en el resto.
+sacarDeMano(Carta, [Otra | Resto], [Otra | RestoOut]) :-
+    sacarDeMano(Carta, Resto, RestoOut).
