@@ -3,7 +3,10 @@
 :- module(tda_juego, [
     initGame/4,
     printGame/2,
-    playToBench/3
+    playToBench/3,
+    changeActivePokemon/3,
+    drawCardFromDeck/3
+
 
 ]).
 
@@ -78,7 +81,7 @@ determinarTurno(0, 1).
 determinarTurno(1, 2).
 
 
-
+%RF10
 
 
 % Descripcion: Pone un Pokemon de la mano en la banca si hay espacio disponible.
@@ -116,3 +119,52 @@ sacarDeMano(Carta, [Carta | Resto], Resto) :- !.
 % Caso recursivo: No es la cabeza, seguimos buscando en el resto.
 sacarDeMano(Carta, [Otra | Resto], [Otra | RestoOut]) :-
     sacarDeMano(Carta, Resto, RestoOut).
+
+
+
+
+% ==============================================================================
+% RF11: CHANGE ACTIVE POKEMON
+% ==============================================================================
+
+changeActivePokemon([J1, J2, Turno], PokemonInBenchCard, GameOut) :-
+    (   Turno == 1
+    ->  cambiarActivo(J1, PokemonInBenchCard, J1Out),
+        GameOut = [J1Out, J2, Turno]
+    ;   cambiarActivo(J2, PokemonInBenchCard, J2Out),
+        GameOut = [J1, J2Out, Turno]
+    ).
+
+cambiarActivo([ID, Mano, Premios, Mazo, Banca, null, Descarte], PokemonInBenchCard, JugadorOut) :-
+    sacarDeMano(PokemonInBenchCard, Banca, BancaSinNuevo),
+    JugadorOut = [ID, Mano, Premios, Mazo, BancaSinNuevo, PokemonInBenchCard, Descarte].
+
+cambiarActivo([ID, Mano, Premios, Mazo, Banca, [CartaBaseViejo, EnergiasViejas, DagnoViejo, EstadoViejo], Descarte], PokemonInBenchCard, JugadorOut) :-
+    sacarDeMano(PokemonInBenchCard, Banca, BancaSinNuevo),
+    nth0(9, CartaBaseViejo, CosteRetirada),
+    length(EnergiasViejas, CantEnergias),
+    CantEnergias >= CosteRetirada,
+    repartirCartas(CosteRetirada, EnergiasViejas, EnergiasPagadas, EnergiasRestantes),
+    ViejoActivoEnBanca = [[CartaBaseViejo, EnergiasRestantes, DagnoViejo, EstadoViejo]],
+    append(BancaSinNuevo, ViejoActivoEnBanca, BancaOut),
+    append(Descarte, EnergiasPagadas, DescarteOut),
+    JugadorOut = [ID, Mano, Premios, Mazo, BancaOut, PokemonInBenchCard, DescarteOut].
+
+
+
+
+% ==============================================================================
+% RF12: DRAW CARD FROM DECK
+% ==============================================================================
+
+drawCardFromDeck([J1, J2, Turno], CardObtained, GameOut) :-
+    (   Turno == 1
+    ->  robarCarta(J1, CardObtained, J1Out),
+        GameOut = [J1Out, J2, Turno]
+    ;   robarCarta(J2, CardObtained, J2Out),
+        GameOut = [J1, J2Out, Turno]
+    ).
+
+robarCarta([ID, Mano, Premios, [CartaSacada | MazoRestante], Banca, Activo, Descarte], CartaSacada, JugadorOut) :-
+    ManoOut = [CartaSacada | Mano],
+    JugadorOut = [ID, ManoOut, Premios, MazoRestante, Banca, Activo, Descarte].
