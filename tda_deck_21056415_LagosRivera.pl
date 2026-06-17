@@ -1,6 +1,6 @@
 :- module(tda_deck, [
-    createDeck/2
-    shuffleDeck/3
+    createDeck/2,
+    shuffleDeck/3,
     randomPuro/2
 ]).
 
