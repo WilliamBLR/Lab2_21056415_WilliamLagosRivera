@@ -1,0 +1,25 @@
+
+1. REQUISITOS PREVIOS:
+   - Tener instalado SWI-Prolog en el computador
+   - Mantener todos los archivos (.pl) en una misma carpeta:
+     * tda_carta_21056415_LagosRivera.pl
+     * tda_deck_21056415_LagosRivera.pl
+     * tda_juego_21056415_LagosRivera.pl
+     * main_21056415_LagosRivera.pl
+
+2. EJECUCION:
+   a. Abra la consola de SWI-Prolog.
+   b. Navegue a la carpeta donde estan los archivos o utilice la ruta absoluta para el comando consult.
+   c. Cargue el archivo principal ejecutando:
+      ?- consult('ruta/a/tu/archivo/main_21056415_LagosRivera.pl').
+      
+
+   d. Una vez que la consola responda 'true.', ejecute el script de pruebas completo con:
+      ?- test.
+
+3. RESULTADOS ESPERADOS:
+   - La consola imprimira en pantalla la simulacion de la partida, incluyendo:
+     * Creacion de cartas (basicos, evoluciones, EX, entrenadores).
+     * Configuracion del escenario inicial.
+     * Ejecucion paso a paso de acciones (playToBench, useEnergyCard, useTrainerCard, evolvePokemon, usePokemonAttack).
+     * Impresion final del tablero reflejando el dano realizado y la obtencion de premios.
