@@ -1,3 +1,4 @@
+
 :- module(tda_deck, [
     createDeck/2,
     shuffleDeck/3,
@@ -13,59 +14,77 @@
 
 
 
+
+% revisa que no le falte ni una carta
 createDeck(Cards, Deck) :-
-    length(Cards, 60),                  %Regla 1: Exactamente 60 cartas
-    tienePokemonBasico(Cards),          %Regla 2: Al menos 1 Pokemon basico
-    validarCopias(Cards, Cards),        %Regla 3: Maximo 4 copias (salvo energias)
-    Deck = Cards.                       %i todo pasa, unifica la baraja
 
-% --- FUNCIONES AUXILIARES----
 
-% Descripcion: Verifica recursivamente si hay al menos un Pokemon basico.
-% Caso base: Encontramos un Pokemon basico.
+    length(Cards, 60),                  %Regla 1: 60 cartas o nada
+    tienePokemonBasico(Cards),          %tiene que haber al menos un basic
+    validarCopias(Cards, Cards),        %no se puede tener 50 pikachus, max 4
+    Deck = Cards.                       %si paso todo el filtro, unificamos y listo
+
+
+% --- FUNCIONES AUXILIARES-----
+
+
+% Descripcion: busca si hay un basico en el mazo, si no lo encuentra explota o retorna falso
+% caso base, pillamos un pokemon basico
 tienePokemonBasico([Carta | _]) :-
     getTipoCarta(Carta, Tipo),
     Tipo == "pokemon",
-    nth0(4, Carta, EvolucionaDe),       % El indice 4 en nuestra carta es EvolucionaDe
-    EvolucionaDe == null.
+    nth0(4, Carta, EvolucionaDe),       
+    EvolucionaDe == null.               %si es null es que es basico pos
 
-% Caso recursivo: Si la carta no es basico, revisamos el resto de la lista.
+
+% caso recursivo, seguimos buscando en el resto
 tienePokemonBasico([_ | Resto]) :-
     tienePokemonBasico(Resto).
 
-% Descripcion: Recorre el mazo validando que ninguna carta supere las 4 copias.
-% Caso base: Lista vacia, todo ok.
+
+
+% Descripcion: recorre todo el mazo validando 
+% Caso base: llegamos al final, todo ok
 validarCopias([], _).
 
-% Caso recursivo: Evaluamos la carta actual y pasamos al resto.
+
+
+% Caso recursivo: evaluamos la cartita actual y seguimos con el resto
 validarCopias([Carta | Resto], MazoCompleto) :-
     getTipoCarta(Carta, Tipo),
     validarLimites(Tipo, Carta, MazoCompleto),
     validarCopias(Resto, MazoCompleto).
 
-% Descripcion: Valida el limite de 4 cartas dependiendo si es energia o no.
-% Caso 1: Si es energia, siempre es valido (no importa la cantidad).
+
+
+% Descripcion: valida si la carta se puede meter o ya hay muchas
+% si es energia da lo mismo la cantidad
 validarLimites("energia", _, _).
 
-% Caso 2: Si no es energia, contamos cuantas hay en el mazo completo y vemos que sea <= 4.
+
+% si no es energia hay que contar
 validarLimites(Tipo, Carta, MazoCompleto) :-
-    Tipo \== "energia",                 % \== significa "distinto de"
+    Tipo \== "energia",                 
     getNombre(Carta, Nombre),
     contarCopias(Nombre, MazoCompleto, Cantidad),
-    Cantidad =< 4.
+    Cantidad =< 4.                      %el limite de siempre
 
-% Descripcion: Cuenta cuantas veces aparece un nombre especifico en el mazo.
-% Caso base: Mazo vacio, el total es 0.
+
+% Descripcion: cuenta las copias de una carta en especifico
+% Caso base: lista vacia retorna 0
 contarCopias(_, [], 0).
 
-% Caso recursivo 1: El nombre coincide, sumamos 1 al total.
+
+
+% si la carta es igual sumamos uno
 contarCopias(NombreBuscado, [Carta | Resto], Total) :-
     getNombre(Carta, NombreCarta),
     NombreBuscado == NombreCarta,
     contarCopias(NombreBuscado, Resto, SubTotal),
     Total is SubTotal + 1.
 
-% Caso recursivo 2: El nombre no coincide, no sumamos, pasamos al resto.
+
+% si no es igual no sumamos 
 contarCopias(NombreBuscado, [Carta | Resto], Total) :-
     getNombre(Carta, NombreCarta),
     NombreBuscado \== NombreCarta,
@@ -77,24 +96,25 @@ contarCopias(NombreBuscado, [Carta | Resto], Total) :-
 
 
 
-%RF07: SHUFFLE DECK
+% RF07: SHUFFLE DECK que el mazo no este ordenado
 
 
-% Descripcion: Genera el siguiente numero de una secuencia pseudoaleatoria.
-% Dominio: Xn (Int) X Xn1 (Int)
+% Descripcion: genera el numerito pseudoaleatorio
 randomPuro(Xn, Xn1) :-
     Xn1 is (1103515245 * Xn + 12345) mod 2147483648.
 
-% Descripcion: Revuelve una baraja de cartas haciendo uso de una semilla.
-% Algoritmo: Utiliza la semilla para calcular un indice. Saca la carta en ese
-% indice, genera una nueva semilla con randomPuro, y llama recursivamente 
-% con el resto de la baraja para ir armando el mazo mezclado.
-% Dominio: DeckIn (TDA Baraja) X Seed (Int) X DeckOut (TDA Baraja)
 
-% Caso base: Una baraja vacia devuelve una baraja vacia.
+
+% Descripcion: mezcla el mazo con la semilla
+% Algoritmo: saca una carta, mezcla el resto, se repite
+% Dominio: deckin x semilla x deckout
+
+% baraja vacia es vacia
 shuffleDeck([], _, []).
 
-% Caso recursivo: Selecciona una carta y mezcla el resto.
+
+
+% caso recursivo: seleccionamos carta y mezclamos lo que queda
 shuffleDeck(DeckIn, Seed, DeckOut) :-
     length(DeckIn, Largo),
     Largo > 0,
@@ -104,19 +124,20 @@ shuffleDeck(DeckIn, Seed, DeckOut) :-
     shuffleDeck(RestoDeck, NuevaSemilla, RestoMezclado),
     DeckOut = [CartaSacada | RestoMezclado].
 
-% --- FUNCIONES AUXILIARES------
 
-% Descripcion: Extrae un elemento en un indice N especifico de una lista.
-% Dominio: Indice (Int) X ListaOriginal (List) X Elemento (Item) X ListaRestante (List)
 
-% Caso base: Sacar el elemento 0 es simplemente tomar la cabeza de la lista.
+% --- FUNCIONES AUXILIARES PARA SACAR ELEMENTOS------
+
+
+% Descripcion: extrae elemento en indice n
+% esto es sacar la carta del mazo y no dejar el hueco
+
+% caso base, el elemento es el primero
 sacarElemento(0, [Elemento | Resto], Elemento, Resto).
 
-% Caso recursivo: Para sacar el elemento N, sacamos el N-1 del resto de la lista.
+
+% caso recursivo, buscamos el n-1 en el resto
 sacarElemento(N, [Cabeza | Resto], ElementoExtraido, [Cabeza | RestoActualizado]) :-
     N > 0,
     N1 is N - 1,
     sacarElemento(N1, Resto, ElementoExtraido, RestoActualizado).
-
-
-

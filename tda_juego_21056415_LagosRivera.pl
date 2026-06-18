@@ -15,13 +15,14 @@
 :- use_module(tda_carta_21056415_LagosRivera).
 :- use_module(tda_deck_21056415_LagosRivera).
 
-% ==============================================================================
-% RF08: INIT GAME
-% ==============================================================================
-
+% RF08: Inicializa la partida
+% Dominio: Mazo1 x Mazo2 x Semilla x JuegoResultante
+% Recorrido: El estado inicial del juego
 initGame(DeckJugador1, DeckJugador2, Seed, G1) :-
+    % Primero barajamos ambos mazos usando la semilla base
     shuffleDeck(DeckJugador1, Seed, DeckBarajado1),
     randomPuro(Seed, Seed2),
+    % Repartimos 7 cartas y validamos que haya al menos un pokemon basico
     obtenerManoValida(DeckBarajado1, DeckJugador1, Seed2, ManoJ1, RestoDeckJ1, Seed3),
     repartirCartas(6, RestoDeckJ1, PremiosJ1, MazoFinalJ1),
     
@@ -30,22 +31,25 @@ initGame(DeckJugador1, DeckJugador2, Seed, G1) :-
     obtenerManoValida(DeckBarajado2, DeckJugador2, Seed4, ManoJ2, RestoDeckJ2, Seed5),
     repartirCartas(6, RestoDeckJ2, PremiosJ2, MazoFinalJ2),
     
+    % Creamos la estructura de cada jugador: [ID, Mano, Premios, Mazo, Banca, Activo, Descarte]
     J1 = [1, ManoJ1, PremiosJ1, MazoFinalJ1, [], null, []],
     J2 = [2, ManoJ2, PremiosJ2, MazoFinalJ2, [], null, []],
     
+    % Lanzamos moneda para ver quien parte
     randomPuro(Seed5, Seed6),
     Moneda is Seed6 mod 2,
     determinarTurno(Moneda, TurnoInicial),
     
     G1 = [J1, J2, TurnoInicial].
 
+% Funcion auxiliar para repartir n cartas
 repartirCartas(0, Mazo, [], Mazo).
-
 repartirCartas(N, [Carta | RestoMazo], [Carta | RestoMano], MazoFinal) :-
     N > 0,
     N1 is N - 1,
     repartirCartas(N1, RestoMazo, RestoMano, MazoFinal).
 
+% Valida que la mano tenga al menos un pokemon basico
 obtenerManoValida(DeckBarajado, DeckOriginal, SeedActual, ManoFinal, MazoFinal, SeedFinal) :-
     repartirCartas(7, DeckBarajado, ManoTentativa, MazoTentativo),
     evaluarMano(ManoTentativa, DeckOriginal, SeedActual, ManoFinal, MazoTentativo, MazoFinal, SeedFinal).
@@ -53,6 +57,7 @@ obtenerManoValida(DeckBarajado, DeckOriginal, SeedActual, ManoFinal, MazoFinal, 
 evaluarMano(ManoTentativa, _, SeedActual, ManoTentativa, MazoTentativo, MazoTentativo, SeedActual) :-
     tienePokemonBasicoMano(ManoTentativa).
 
+% Si no tiene basico, se rebaraja el mazo completo y se vuelve a intentar
 evaluarMano(ManoTentativa, DeckOriginal, SeedActual, ManoFinal, _, MazoFinal, SeedFinal) :-
     noTienePokemonBasicoMano(ManoTentativa),
     randomPuro(SeedActual, NuevaSeed),
@@ -60,22 +65,20 @@ evaluarMano(ManoTentativa, DeckOriginal, SeedActual, ManoFinal, _, MazoFinal, Se
     randomPuro(NuevaSeed, OtraSeed),
     obtenerManoValida(NuevoDeckBarajado, DeckOriginal, OtraSeed, ManoFinal, MazoFinal, SeedFinal).
 
+% Verifica si existe algun pokemon basico en la mano
 tienePokemonBasicoMano([Carta | _]) :-
     getTipoCarta(Carta, Tipo),
     Tipo == "pokemon",
     nth0(4, Carta, EvolucionaDe),
     EvolucionaDe == null.
-
 tienePokemonBasicoMano([_ | Resto]) :-
     tienePokemonBasicoMano(Resto).
 
 noTienePokemonBasicoMano([]).
-
 noTienePokemonBasicoMano([Carta | Resto]) :-
     getTipoCarta(Carta, Tipo),
     Tipo \== "pokemon",
     noTienePokemonBasicoMano(Resto).
-
 noTienePokemonBasicoMano([Carta | Resto]) :-
     getTipoCarta(Carta, Tipo),
     Tipo == "pokemon",
@@ -86,15 +89,13 @@ noTienePokemonBasicoMano([Carta | Resto]) :-
 determinarTurno(0, 1). 
 determinarTurno(1, 2).
 
-% ==============================================================================
-% RF09: PRINT GAME
-% ==============================================================================
-
+% RF09: Genera el string para imprimir el estado del juego
 printGame([J1, J2, Turno], Str) :-
     printJugador(J1, Turno, StrJ1),
     printJugador(J2, Turno, StrJ2),
     atomic_list_concat(['=== TABLERO DE JUEGO ===\n', 'Turno del Jugador: ', Turno, '\n\n', StrJ1, '\n', StrJ2], Str).
 
+% Imprime info del jugador
 printJugador([ID, Mano, Premios, Mazo, Banca, Activo, Descarte], Turno, Str) :-
     length(Premios, CantPremios),
     length(Mazo, CantMazo),
@@ -130,6 +131,7 @@ printListaBanca([PJ | Resto], Str) :-
     printListaBanca(Resto, StrResto),
     atomic_list_concat([StrPJ, StrResto], Str).
 
+% Formato para mostrar pokemon en juego con sus contadores
 printCardInGame([CartaBase, Energias, Dagno, Estado], Str) :-
     nth0(3, CartaBase, Nombre),
     nth0(6, CartaBase, Tipo),
@@ -177,10 +179,7 @@ printNombresDescarte([Carta | Resto], Str) :-
     printNombresDescarte(Resto, StrResto),
     atomic_list_concat(['  * ', Nombre, '\n', StrResto], Str).
 
-% ==============================================================================
-% RF10: PLAY TO BENCH
-% ==============================================================================
-
+% RF10: Agrega un pokemon a la banca
 playToBench([J1, J2, Turno], PokemonCard, GameOut) :-
     (Turno == 1 ->
         jugarABanca(J1, PokemonCard, J1Out),
@@ -193,8 +192,9 @@ playToBench([J1, J2, Turno], PokemonCard, GameOut) :-
 jugarABanca([ID, Mano, Premios, Mazo, Banca, Activo, Descarte], PokemonCard, JugadorOut) :-
     getTipoCarta(PokemonCard, "pokemon"),
     length(Banca, CantBanca),
-    CantBanca < 5,
+    CantBanca < 5, % Limite de 5 en banca
     sacarDeMano(PokemonCard, Mano, ManoOut),
+    % Iniciamos el pokemon en juego con 0 daño y sin energias
     CartaEnJuego = [PokemonCard, [], 0, "normal"],
     append(Banca, [CartaEnJuego], BancaOut),
     JugadorOut = [ID, ManoOut, Premios, Mazo, BancaOut, Activo, Descarte].
@@ -203,10 +203,7 @@ sacarDeMano(Carta, [Carta | Resto], Resto) :- !.
 sacarDeMano(Carta, [Otra | Resto], [Otra | RestoOut]) :-
     sacarDeMano(Carta, Resto, RestoOut).
 
-% ==============================================================================
-% RF11: CHANGE ACTIVE POKEMON
-% ==============================================================================
-
+% RF11: Cambia el pokemon activo
 changeActivePokemon([J1, J2, Turno], PokemonInBenchCard, GameOut) :-
     (   Turno == 1
     ->  cambiarActivo(J1, PokemonInBenchCard, J1Out),
@@ -215,25 +212,24 @@ changeActivePokemon([J1, J2, Turno], PokemonInBenchCard, GameOut) :-
         GameOut = [J1, J2Out, Turno]
     ).
 
+% Caso cuando no hay activo previo, solo promovemos
 cambiarActivo([ID, Mano, Premios, Mazo, Banca, null, Descarte], PokemonInBenchCard, JugadorOut) :-
     sacarDeMano(PokemonInBenchCard, Banca, BancaSinNuevo),
     JugadorOut = [ID, Mano, Premios, Mazo, BancaSinNuevo, PokemonInBenchCard, Descarte].
 
+% Caso con activo previo: hay que pagar costo de retirada
 cambiarActivo([ID, Mano, Premios, Mazo, Banca, [CartaBaseViejo, EnergiasViejas, DagnoViejo, EstadoViejo], Descarte], PokemonInBenchCard, JugadorOut) :-
     sacarDeMano(PokemonInBenchCard, Banca, BancaSinNuevo),
     nth0(9, CartaBaseViejo, CosteRetirada),
     length(EnergiasViejas, CantEnergias),
-    CantEnergias >= CosteRetirada,
+    CantEnergias >= CosteRetirada, % Validacion de costo
     repartirCartas(CosteRetirada, EnergiasViejas, EnergiasPagadas, EnergiasRestantes),
     ViejoActivoEnBanca = [[CartaBaseViejo, EnergiasRestantes, DagnoViejo, EstadoViejo]],
     append(BancaSinNuevo, ViejoActivoEnBanca, BancaOut),
-    append(Descarte, EnergiasPagadas, DescarteOut),
+    append(Descarte, EnergiasPagadas, DescarteOut), % Energias se van al descarte
     JugadorOut = [ID, Mano, Premios, Mazo, BancaOut, PokemonInBenchCard, DescarteOut].
 
-% ==============================================================================
-% RF12: DRAW CARD FROM DECK
-% ==============================================================================
-
+% RF12: Roba carta del mazo
 drawCardFromDeck([J1, J2, Turno], CardObtained, GameOut) :-
     (   Turno == 1
     ->  robarCarta(J1, CardObtained, J1Out),
@@ -246,10 +242,7 @@ robarCarta([ID, Mano, Premios, [CartaSacada | MazoRestante], Banca, Activo, Desc
     ManoOut = [CartaSacada | Mano],
     JugadorOut = [ID, ManoOut, Premios, MazoRestante, Banca, Activo, Descarte].
 
-% ==============================================================================
-% RF13: USE ENERGY CARD
-% ==============================================================================
-
+% RF13: Une energia a un pokemon
 useEnergyCard([J1, J2, Turno], PokemonInGame, EnergyCard, GameOut) :-
     (   Turno == 1
     ->  equiparEnergia(J1, PokemonInGame, EnergyCard, J1Out),
@@ -261,6 +254,7 @@ useEnergyCard([J1, J2, Turno], PokemonInGame, EnergyCard, GameOut) :-
 equiparEnergia([ID, Mano, Premios, Mazo, Banca, Activo, Descarte], PokemonInGame, EnergyCard, JugadorOut) :-
     getTipoCarta(EnergyCard, "energia"),
     sacarDeMano(EnergyCard, Mano, ManoOut),
+    % Buscamos si el pokemon esta en activo o en banca
     (   Activo == PokemonInGame
     ->  PokemonInGame = [CartaBase, Energias, Dagno, Estado],
         append(Energias, [EnergyCard], NuevasEnergias),
@@ -274,10 +268,7 @@ equiparEnergia([ID, Mano, Premios, Mazo, Banca, Activo, Descarte], PokemonInGame
         JugadorOut = [ID, ManoOut, Premios, Mazo, NuevaBanca, Activo, Descarte]
     ).
 
-% ==============================================================================
-% RF14: EVOLVE POKEMON
-% ==============================================================================
-
+% RF14: Evoluciona un pokemon
 evolvePokemon([J1, J2, Turno], PokemonInGame, EvolutionCard, GameOut) :-
     (   Turno == 1
     ->  evolucionar(J1, PokemonInGame, EvolutionCard, J1Out),
@@ -288,11 +279,11 @@ evolvePokemon([J1, J2, Turno], PokemonInGame, EvolutionCard, GameOut) :-
 
 evolucionar([ID, Mano, Premios, Mazo, Banca, Activo, Descarte], PokemonInGame, EvolutionCard, JugadorOut) :-
     getTipoCarta(EvolutionCard, "pokemon"),
-    nth0(4, EvolutionCard, EvolucionaDe),
+    nth0(4, EvolutionCard, EvolucionaDe), % El nombre del basico previo
     EvolucionaDe \== null,
     PokemonInGame = [CartaBaseVieja, Energias, Dagno, Estado],
     nth0(3, CartaBaseVieja, NombreViejo),
-    EvolucionaDe == NombreViejo,
+    EvolucionaDe == NombreViejo, % Validamos que sean compatibles
     sacarDeMano(EvolutionCard, Mano, ManoOut),
     NuevoPokemonEnJuego = [EvolutionCard, Energias, Dagno, Estado],
     (   Activo == PokemonInGame
@@ -302,10 +293,7 @@ evolucionar([ID, Mano, Premios, Mazo, Banca, Activo, Descarte], PokemonInGame, E
         JugadorOut = [ID, ManoOut, Premios, Mazo, NuevaBanca, Activo, Descarte]
     ).
 
-% ==============================================================================
-% RF15: USE POKEMON ABILITY
-% ==============================================================================
-
+% RF15: Usa habilidad
 usePokemonAbility(GameIn, PokemonInGame, GameOut) :-
     PokemonInGame = [CartaBase | _],
     nth0(11, CartaBase, Habilidad),
@@ -313,44 +301,40 @@ usePokemonAbility(GameIn, PokemonInGame, GameOut) :-
     nth0(4, Habilidad, PredicadoAsociado),
     call(PredicadoAsociado, GameIn, GameOut).
 
-% ==============================================================================
-% RF16: USE POKEMON ATTACK (COMPLETO Y CORREGIDO)
-% ==============================================================================
-
+% RF16: Ejecuta ataque de pokemon
 usePokemonAttack([J1, J2, Turno], PokemonCard, AttackName, AdditionalArgs, GameOut) :-
-    % Si AttackName es null, el enunciado dice que el turno termina sin atacar.
     (   AttackName == null
     ->  GameOut = [J1, J2, Turno]
     ;   
-        % 1. Extraer datos del atacante y buscar el ataque
+        % Buscamos el ataque en la lista del pokemon
         PokemonCard = [CartaBaseAtq, EnergiasAtq, _, _],
         nth0(12, CartaBaseAtq, ListaAtaques),
         buscarAtaque(AttackName, ListaAtaques, Ataque),
         Ataque = [Coste, _, _, DagnoBase, PredicadoAsociado],
         
-        % 2. Validar que tengamos la energia suficiente
+        % Validamos que haya suficientes energias
         length(EnergiasAtq, CantEnergias),
         CantEnergias >= Coste,
         
-        % 3. Identificar al jugador defensor y a su Pokemon activo
+        % Identificamos al rival
         (   Turno == 1 -> JDefensor = J2 ; JDefensor = J1 ),
         JDefensor = [IdDef, ManoDef, PremiosDef, MazoDef, BancaDef, DefensorActivo, DescarteDef],
         DefensorActivo \== null, 
         DefensorActivo = [CartaBaseDef, EnergiasDef, DagnoActualDef, EstadoDef],
         
-        % 4. Calcular daño final considerando debilidad y resistencia
+        % Calculamos el daño aplicando debilidad o resistencia
         nth0(6, CartaBaseAtq, TipoAtq),
         nth0(7, CartaBaseDef, DebilidadDef),
         nth0(8, CartaBaseDef, ResistenciaDef),
         calcularDagnoFinal(DagnoBase, TipoAtq, DebilidadDef, ResistenciaDef, DagnoFinal),
         
-        % 5. Aplicar daño
+        % Aplicamos daño acumulado
         NuevoDagnoDef is DagnoActualDef + DagnoFinal,
         nth0(5, CartaBaseDef, PsMaxDef),
         
-        % 6. Chequear si el Pokemon defensor es derrotado
+        % Si el daño supera los PS, el pokemon rival cae
         (   NuevoDagnoDef >= PsMaxDef
-        ->  % DEFEAT: Va al descarte y el atacante roba 1 premio
+        ->  % Se mueve al descarte y se roba premio
             NuevoDefensor = null,
             append(DescarteDef, [DefensorActivo], NuevoDescarteDef),
             (   Turno == 1
@@ -361,7 +345,7 @@ usePokemonAttack([J1, J2, Turno], PokemonCard, AttackName, AdditionalArgs, GameO
                 J2Parcial = [IdAtq, [PremioSacado | ManoAtq], RestoPremios, MazoAtq, BancaAtq, ActivoAtq, DescarteAtq],
                 J1Parcial = [IdDef, ManoDef, PremiosDef, MazoDef, BancaDef, NuevoDefensor, NuevoDescarteDef]
             )
-        ;   % SURVIVE: Solo se actualiza el daño recibido
+        ;   % Si sobrevive, solo aumentamos el daño registrado
             NuevoDefensor = [CartaBaseDef, EnergiasDef, NuevoDagnoDef, EstadoDef],
             (   Turno == 1
             ->  J1Parcial = J1,
@@ -373,57 +357,36 @@ usePokemonAttack([J1, J2, Turno], PokemonCard, AttackName, AdditionalArgs, GameO
         
         GameCasiFinal = [J1Parcial, J2Parcial, Turno],
         
-        % 7. Aplicar el Predicado Asociado del ataque (si paraliza, duerme, etc.)
+        % Si el ataque tiene un predicado extra, lo llamamos
         (   PredicadoAsociado \== null
         ->  call(PredicadoAsociado, GameCasiFinal, PokemonCard, AdditionalArgs, GameOut)
         ;   GameOut = GameCasiFinal
         )
     ).
 
-% --- FUNCIONES AUXILIARES DE ATAQUE ---
-
-% Buscar el ataque especifico dentro de la lista de ataques del Pokemon
+% Helpers para calcular daño y buscar ataques
 buscarAtaque(NombreBuscado, [Ataque | _], Ataque) :-
     nth0(1, Ataque, NombreBuscado), !.
 buscarAtaque(NombreBuscado, [_ | Resto], Ataque) :-
     buscarAtaque(NombreBuscado, Resto, Ataque).
 
-% Calcular daño por Debilidad (Daño x 2)
+% Logica de tipos: Debilidad duplica, Resistencia resta 20
 calcularDagnoFinal(DagnoBase, TipoAtq, Debilidad, _, DagnoFinal) :-
     Debilidad \== null,
     TipoAtq == Debilidad, !,
     DagnoFinal is DagnoBase * 2.
-
-% Calcular daño por Resistencia (Daño - 20)
 calcularDagnoFinal(DagnoBase, TipoAtq, _, Resistencia, DagnoFinal) :-
     Resistencia \== null,
     TipoAtq == Resistencia, !,
     DagnoFinal is max(0, DagnoBase - 20).
-
-% Daño normal sin multiplicadores
 calcularDagnoFinal(DagnoBase, _, _, _, DagnoBase).
 
-
-
-
-
-
-
-
-
-
-% ==============================================================================
-% RF17: USE TRAINER CARD
-% ==============================================================================
-
+% RF17: Ejecuta accion de entrenador
 useTrainerCard(GameIn, TrainerCard, GameOut) :-
     getTipoCarta(TrainerCard, "entrenador"),
     nth0(6, TrainerCard, PredicadoAsociado),
     call(PredicadoAsociado, GameIn, GameOut).
 
-% ==============================================================================
-% RF18: END TURN
-% ==============================================================================
-
+% RF18: Cambia turno
 endTurn([J1, J2, 1], [J1, J2, 2]).
 endTurn([J1, J2, 2], [J1, J2, 1]).
